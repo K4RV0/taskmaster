@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>TaskMaster</title>
+  <meta name="description" content="Minimalistyczna lista zadań na cały tydzień"/>
+
+  <!-- PWA / iOS -->
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="TaskMaster"/>
+  <meta name="theme-color" content="#1D9E75"/>
+
+  <!-- Icons (inline SVG jako base64 – nie potrzeba zewnętrznych plików) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjMUQ5RTc1Ii8+PHRleHQgeT0iLjllbSIgZm9udC1zaXplPSI3MCIgeD0iMTIiPuKcoxwvdGV4dD48L3N2Zz4="/>
+
+  <style>
+    :root {
+      --green: #1D9E75;
+      --green-light: #E1F5EE;
+      --green-dark: #0F6E56;
+      --red: #E24B4A;
+      --red-light: #FAECE7;
+      --yellow-light: #FAEEDA;
+      --lime-light: #EAF3DE;
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --border: #e4e7ed;
+      --border-light: #f0f2f6;
+      --text: #1a1f3c;
+      --text-2: #5a6480;
+      --text-3: #9aa0b8;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text); overscroll-behavior: none; }
+
+    /* ── Layout ── */
+    .app { display: flex; flex-direction: column; height: 100%; max-width: 480px; margin: 0 auto; background: var(--surface); }
+
+    /* ── Header ── */
+    .header {
+      padding: calc(var(--safe-top) + 14px) 20px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border-light);
+      display: flex; align-items: center; gap: 12px;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .header-logo { font-size: 22px; }
+    .header-title { font-size: 18px; font-weight: 700; flex: 1; }
+    .header-sub { font-size: 12px; color: var(--text-3); }
+
+    /* ── Progress ── */
+    .progress-wrap { padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border-light); }
+    .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+    .progress-bar-bg { background: var(--bg); border-radius: 99px; height: 6px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 99px; background: var(--green); transition: width .4s; }
+
+    /* ── Day tabs ── */
+    .tabs-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; background: var(--surface); border-bottom: 1px solid var(--border-light); }
+    .tabs-wrap::-webkit-scrollbar { display: none; }
+    .tabs { display: flex; padding: 10px 16px; gap: 8px; }
+    .tab { flex-shrink: 0; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 500; cursor: pointer; background: var(--bg); color: var(--text-2); border: 1px solid var(--border); transition: all .15s; display: flex; align-items: center; gap: 5px; }
+    .tab.active { background: var(--green); color: #fff; border-color: var(--green); }
+    .tab-badge { background: rgba(255,255,255,0.3); font-size: 10px; padding: 0 5px; border-radius: 99px; }
+    .tab:not(.active) .tab-badge { background: var(--green-light); color: var(--green-dark); }
+
+    /* ── Task list ── */
+    .task-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .task-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); transition: border-color .15s; }
+    .task-item.done { opacity: .45; }
+    .task-item.confirming { border-color: var(--red); background: #fff8f8; }
+    .task-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: all .15s; }
+    .task-check.checked { background: var(--green); border-color: var(--green); }
+    .task-check svg { display: none; }
+    .task-check.checked svg { display: block; }
+    .task-body { flex: 1; min-width: 0; }
+    .task-title { font-size: 14px; line-height: 1.4; }
+    .task-item.done .task-title { text-decoration: line-through; color: var(--text-3); }
+    .task-meta { display: flex; align-items: center; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+    .tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; }
+    .tag-high { background: var(--red-light); color: #993C1D; }
+    .tag-mid { background: var(--yellow-light); color: #854F0B; }
+    .tag-low { background: var(--lime-light); color: #3B6D11; }
+    .tag-day { background: var(--bg); color: var(--text-2); }
+    .delete-btn { flex-shrink: 0; width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text-3); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .15s; }
+    .delete-btn:active { background: var(--red-light); border-color: var(--red); color: var(--red); }
+
+    /* ── Confirm bar ── */
+    .confirm-inline { margin-top: 10px; padding-top: 10px; border-top: 1px solid #fdd; display: flex; align-items: center; gap: 8px; }
+    .confirm-inline span { font-size: 12px; color: var(--red); flex: 1; }
+    .confirm-inline button { font-size: 12px; padding: 5px 12px; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+    .confirm-inline button.yes { background: var(--red); border-color: var(--red); color: #fff; }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 48px 0; color: var(--text-3); font-size: 14px; }
+    .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+    /* ── Bottom bar ── */
+    .bottom-bar {
+      padding: 12px 16px calc(var(--safe-bottom) + 12px);
+      background: var(--surface);
+      border-top: 1px solid var(--border-light);
+    }
+    .add-btn { width: 100%; padding: 13px; border: 1.5px dashed var(--border); border-radius: var(--radius); font-size: 14px; color: var(--text-2); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; background: transparent; transition: background .15s; }
+    .add-btn:active { background: var(--bg); }
+    .clear-done-btn { width: 100%; margin-top: 8px; padding: 10px; border-radius: var(--radius-sm); font-size: 13px; color: var(--red); display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; background: var(--red-light); border: none; }
+
+    /* ── Modal ── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal { background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; width: 100%; max-width: 480px; padding: 0 0 calc(var(--safe-bottom) + 16px); transform: translateY(100%); transition: transform .25s cubic-bezier(0.32,0.72,0,1); }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 99px; margin: 12px auto 16px; }
+    .modal-title { font-size: 16px; font-weight: 600; padding: 0 20px 16px; border-bottom: 1px solid var(--border-light); }
+    .modal-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+    .field-label { font-size: 12px; font-weight: 500; color: var(--text-2); margin-bottom: 6px; }
+    .modal-body input[type=text] { width: 100%; font-size: 15px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); outline: none; }
+    .modal-body input[type=text]:focus { border-color: var(--green); }
+
+    /* Segmented prio */
+    .seg { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+    .seg-btn { flex: 1; padding: 10px 4px; font-size: 13px; font-weight: 500; text-align: center; cursor: pointer; background: var(--bg); color: var(--text-2); border: none; border-right: 1px solid var(--border); transition: background .15s; }
+    .seg-btn:last-child { border-right: none; }
+    .seg-btn.active-high { background: var(--red-light); color: #993C1D; }
+    .seg-btn.active-mid { background: var(--yellow-light); color: #854F0B; }
+    .seg-btn.active-low { background: var(--lime-light); color: #3B6D11; }
+
+    /* Day pills */
+    .days-row { display: flex; align-items: center; gap: 6px; }
+    .days-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; flex: 1; }
+    .day-pill { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); cursor: pointer; transition: all .15s; user-select: none; }
+    .day-pill.selected { background: var(--green-light); border-color: var(--green); }
+    .day-pill span { font-size: 10px; font-weight: 600; color: var(--text-2); }
+    .day-pill.selected span { color: var(--green-dark); }
+    .day-dot { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+    .day-pill.selected .day-dot { background: var(--green); }
+
+    .all-toggle { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; flex-shrink: 0; }
+    .all-cb { width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; background: var(--bg); transition: all .15s; }
+    .all-cb.checked { background: var(--green); border-color: var(--green); }
+    .all-cb.checked svg { display: block; }
+    .all-cb svg { display: none; }
+    .all-lbl { font-size: 9px; font-weight: 600; color: var(--text-3); }
+    .divider-v { width: 1px; height: 32px; background: var(--border); flex-shrink: 0; }
+
+    .sel-hint { font-size: 11px; color: var(--text-3); }
+    .field-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+
+    .modal-footer { padding: 0 20px; display: flex; gap: 10px; }
+    .modal-footer button { flex: 1; padding: 13px; border-radius: var(--radius); font-size: 15px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+    .modal-footer button.primary { background: var(--green); border-color: var(--green); color: #fff; }
+    .modal-footer button.primary:disabled { opacity: .4; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">✅</div>
+    <div>
+      <div class="header-title">TaskMaster</div>
+    </div>
+    <div class="header-sub" id="header-sub">0 / 0</div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap">
+    <div class="progress-label"><span>Postęp tygodnia</span><span id="prog-pct">0%</span></div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-bar" style="width:0%"></div></div>
+  </div>
+
+  <!-- Day tabs -->
+  <div class="tabs-wrap">
+    <div class="tabs" id="tabs"></div>
+  </div>
+
+  <!-- Task list -->
+  <div class="task-list" id="task-list"></div>
+
+  <!-- Bottom bar -->
+  <div class="bottom-bar">
+    <button class="clear-done-btn" id="clear-done-btn" onclick="clearDone()" style="display:none">
+      🗑 Usuń ukończone zadania
+    </button>
+    <button class="add-btn" onclick="openModal()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Dodaj zadanie
+    </button>
+  </div>
+</div>
+
+<!-- Add task modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nowe zadanie</div>
+    <div class="modal-body">
+      <div>
+        <div class="field-label">Nazwa zadania</div>
+        <input type="text" id="new-title" placeholder="Czym się zajmiesz?"/>
+      </div>
+      <div>
+        <div class="field-label">Priorytet</div>
+        <div class="seg">
+          <button class="seg-btn active-high" onclick="setPrio('high',this)">🔴 Wysoki</button>
+          <button class="seg-btn" onclick="setPrio('mid',this)">🟡 Średni</button>
+          <button class="seg-btn" onclick="setPrio('low',this)">🟢 Niski</button>
+        </div>
+      </div>
+      <div>
+        <div class="field-header">
+          <span class="field-label" style="margin-bottom:0">Dni tygodnia</span>
+          <span class="sel-hint" id="sel-hint">nie wybrano</span>
+        </div>
+        <div class="days-row">
+          <div class="all-toggle" onclick="toggleAll()">
+            <div class="all-cb" id="all-cb">
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="1.5,6 4.5,9 10.5,3"/></svg>
+            </div>
+            <span class="all-lbl">all</span>
+          </div>
+          <div class="divider-v"></div>
+          <div class="days-grid" id="days-grid"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal()">Anuluj</button>
+      <button class="primary" id="confirm-btn" onclick="addTask()" disabled>Dodaj</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS_SHORT = ['Pon','Wt','Śr','Czw','Pt','Sob','Nd'];
+const DAYS_FULL = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'];
+const PRIO_ORDER = {high:0, mid:1, low:2};
+
+let activeFilter = 'all';
+let selectedPrio = 'high';
+let selectedDays = new Set();
+let confirmingId = null;
+let nextId = 10;
+
+// Load from localStorage or use defaults
+let tasks = JSON.parse(localStorage.getItem('tm_tasks') || 'null') || [
+  {id:1, title:'Przygotować raport Q2', day:'Poniedziałek', prio:'high', done:false},
+  {id:2, title:'Odpisać na maile', day:'Wtorek', prio:'mid', done:false},
+  {id:3, title:'Zakupy spożywcze', day:'Środa', prio:'low', done:true},
+  {id:4, title:'Posprzątać biuro', day:'Sobota', prio:'mid', done:false},
+  {id:5, title:'Przejrzeć rozdział 3 React Native', day:'Czwartek', prio:'high', done:false},
+];
+nextId = Math.max(...tasks.map(t=>t.id), 9) + 1;
+
+function save() {
+  localStorage.setItem('tm_tasks', JSON.stringify(tasks));
+}
+
+function setPrio(p, btn) {
+  selectedPrio = p;
+  document.querySelectorAll('.seg-btn').forEach(b => b.className = 'seg-btn');
+  btn.className = 'seg-btn active-' + p;
+}
+
+function toggleAll() {
+  if (selectedDays.size === 7) selectedDays.clear();
+  else DAYS_FULL.forEach(d => selectedDays.add(d));
+  refreshDayUI();
+}
+
+function toggleDay(full) {
+  if (selectedDays.has(full)) selectedDays.delete(full);
+  else selectedDays.add(full);
+  refreshDayUI();
+}
+
+function refreshDayUI() {
+  const allSel = selectedDays.size === 7;
+  const cb = document.getElementById('all-cb');
+  cb.className = 'all-cb' + (allSel ? ' checked' : '');
+  document.getElementById('days-grid').innerHTML = DAYS_SHORT.map((s, i) => {
+    const full = DAYS_FULL[i];
+    const sel = selectedDays.has(full);
+    return `<div class="day-pill${sel?' selected':''}" onclick="toggleDay('${full}')">
+      <span>${s}</span><div class="day-dot"></div>
+    </div>`;
+  }).join('');
+  const c = selectedDays.size;
+  document.getElementById('sel-hint').textContent = c === 0 ? 'nie wybrano' : c === 7 ? 'cały tydzień' : `${c} ${c===1?'dzień':'dni'}`;
+  document.getElementById('confirm-btn').disabled = c === 0;
+}
+
+function openModal() {
+  selectedDays = new Set(activeFilter !== 'all' ? [activeFilter] : []);
+  selectedPrio = 'high';
+  document.querySelectorAll('.seg-btn').forEach((b,i) => b.className = 'seg-btn' + (i===0?' active-high':''));
+  document.getElementById('new-title').value = '';
+  refreshDayUI();
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('new-title').focus(), 300);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function tryDelete(id) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  if (t.done) {
+    tasks = tasks.filter(t => t.id !== id);
+    save(); render();
+  } else {
+    confirmingId = id;
+    render();
+  }
+}
+
+function confirmDelete() {
+  tasks = tasks.filter(t => t.id !== confirmingId);
+  confirmingId = null;
+  save(); render();
+}
+
+function cancelDelete() {
+  confirmingId = null;
+  render();
+}
+
+function toggleDone(id) {
+  const t = tasks.find(t => t.id === id);
+  if (t) t.done = !t.done;
+  if (confirmingId === id) confirmingId = null;
+  save(); render();
+}
+
+function clearDone() {
+  tasks = tasks.filter(t => !t.done);
+  save(); render();
+}
+
+function addTask() {
+  const title = document.getElementById('new-title').value.trim();
+  if (!title || selectedDays.size === 0) return;
+  const sorted = [...selectedDays].sort((a,b) => DAYS_FULL.indexOf(a) - DAYS_FULL.indexOf(b));
+  sorted.forEach(day => tasks.push({id: nextId++, title, day, prio: selectedPrio, done: false}));
+  save(); closeModal(); render();
+}
+
+function prioTag(p) {
+  const map = {high:['tag-high','Wysoki'], mid:['tag-mid','Średni'], low:['tag-low','Niski']};
+  const [cls, lbl] = map[p];
+  return `<span class="tag ${cls}">${lbl}</span>`;
+}
+
+function render() {
+  // Tabs
+  const filtered_for_tabs = activeFilter === 'all' ? tasks : tasks.filter(t => t.day === activeFilter);
+  const tabsEl = document.getElementById('tabs');
+  const allPending = tasks.filter(t => !t.done).length;
+  let tabsHtml = `<div class="tab${activeFilter==='all'?' active':''}" onclick="setFilter('all')">
+    Wszystkie${allPending > 0 ? `<span class="tab-badge">${allPending}</span>` : ''}
+  </div>`;
+  DAYS_FULL.forEach(d => {
+    const c = tasks.filter(t => t.day === d && !t.done).length;
+    tabsHtml += `<div class="tab${activeFilter===d?' active':''}" onclick="setFilter('${d}')">
+      ${d.slice(0,3)}${c > 0 ? `<span class="tab-badge">${c}</span>` : ''}
+    </div>`;
+  });
+  tabsEl.innerHTML = tabsHtml;
+
+  // Tasks
+  let list = activeFilter === 'all' ? [...tasks] : tasks.filter(t => t.day === activeFilter);
+  const listEl = document.getElementById('task-list');
+
+  if (!list.length) {
+    listEl.innerHTML = `<div class="empty"><div class="empty-icon">🎉</div>Brak zadań na ten dzień</div>`;
+  } else {
+    listEl.innerHTML = list.map(t => {
+      const isConf = confirmingId === t.id;
+      return `<div class="task-item${t.done?' done':''}${isConf?' confirming':''}">
+        <div class="task-check${t.done?' checked':''}" onclick="toggleDone(${t.id})">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="1.5,6 4.5,9 10.5,3"/></svg>
+        </div>
+        <div class="task-body">
+          <div class="task-title" onclick="toggleDone(${t.id})">${t.title}</div>
+          <div class="task-meta">
+            ${prioTag(t.prio)}
+            ${activeFilter==='all' ? `<span class="tag tag-day">${t.day.slice(0,3)}</span>` : ''}
+          </div>
+          ${isConf ? `<div class="confirm-inline">
+            <span>Czy na pewno chcesz usunąć?</span>
+            <button onclick="cancelDelete()">Nie</button>
+            <button class="yes" onclick="confirmDelete()">Usuń</button>
+          </div>` : ''}
+        </div>
+        <button class="delete-btn" onclick="tryDelete(${t.id})">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>`;
+    }).join('');
+  }
+
+  // Progress
+  const done = tasks.filter(t => t.done).length;
+  const total = tasks.length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('prog-pct').textContent = pct + '%';
+  document.getElementById('header-sub').textContent = `${done} / ${total} ukończone`;
+
+  // Clear done btn
+  document.getElementById('clear-done-btn').style.display = done > 0 ? 'flex' : 'none';
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  render();
+  // scroll active tab into view
+  setTimeout(() => {
+    const tabs = document.querySelectorAll('.tab');
+    const idx = f === 'all' ? 0 : DAYS_FULL.indexOf(f) + 1;
+    if (tabs[idx]) tabs[idx].scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+  }, 50);
+}
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+render();
+</script>
+</body>
+</html>
