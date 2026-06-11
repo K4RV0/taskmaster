@@ -4,441 +4,637 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>TaskMaster</title>
-  <meta name="description" content="Minimalistyczna lista zadań na cały tydzień"/>
-
-  <!-- PWA / iOS -->
-  <link rel="manifest" href="manifest.json"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="TaskMaster"/>
-  <meta name="theme-color" content="#1D9E75"/>
-
-  <!-- Icons (inline SVG jako base64 – nie potrzeba zewnętrznych plików) -->
-  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjMUQ5RTc1Ii8+PHRleHQgeT0iLjllbSIgZm9udC1zaXplPSI3MCIgeD0iMTIiPuKcoxwvdGV4dD48L3N2Zz4="/>
-
+  <meta name="theme-color" content="#1a1a2e"/>
+  <link rel="manifest" href="manifest.json"/>
   <style>
     :root {
-      --green: #1D9E75;
-      --green-light: #E1F5EE;
-      --green-dark: #0F6E56;
-      --red: #E24B4A;
-      --red-light: #FAECE7;
-      --yellow-light: #FAEEDA;
-      --lime-light: #EAF3DE;
-      --bg: #f5f7fb;
-      --surface: #ffffff;
-      --border: #e4e7ed;
-      --border-light: #f0f2f6;
-      --text: #1a1f3c;
-      --text-2: #5a6480;
-      --text-3: #9aa0b8;
-      --radius: 12px;
-      --radius-sm: 8px;
+      --bg: #0f0f1a;
+      --bg2: #1a1a2e;
+      --bg3: #22223a;
+      --bg4: #2a2a45;
+      --border: #2e2e50;
+      --border2: #3a3a60;
+      --green: #00e5a0;
+      --green-dim: rgba(0,229,160,0.12);
+      --green-dark: #00b87d;
+      --red: #ff5a5a;
+      --red-dim: rgba(255,90,90,0.12);
+      --yellow: #ffc85a;
+      --yellow-dim: rgba(255,200,90,0.12);
+      --blue: #5a9eff;
+      --text: #e8e8f0;
+      --text2: #8888aa;
+      --text3: #4a4a6a;
+      --radius: 14px;
+      --radius-sm: 9px;
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html, body { height: 100%; background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text); overscroll-behavior: none; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overscroll-behavior: none; }
 
-    /* ── Layout ── */
-    .app { display: flex; flex-direction: column; height: 100%; max-width: 480px; margin: 0 auto; background: var(--surface); }
+    .app { display: flex; flex-direction: column; height: 100%; max-width: 480px; margin: 0 auto; }
 
-    /* ── Header ── */
-    .header {
-      padding: calc(var(--safe-top) + 14px) 20px 14px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border-light);
-      display: flex; align-items: center; gap: 12px;
-      position: sticky; top: 0; z-index: 10;
-    }
-    .header-logo { font-size: 22px; }
-    .header-title { font-size: 18px; font-weight: 700; flex: 1; }
-    .header-sub { font-size: 12px; color: var(--text-3); }
+    /* Header */
+    .header { padding: calc(var(--safe-top) + 16px) 20px 14px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+    .header-back { width: 34px; height: 34px; border-radius: 50%; background: var(--bg3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+    .header-back svg { width: 16px; height: 16px; stroke: var(--text2); fill: none; stroke-width: 2.5; stroke-linecap: round; }
+    .header-info { flex: 1; min-width: 0; }
+    .header-title { font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
+    .header-action { width: 34px; height: 34px; border-radius: 50%; background: var(--green); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; border: none; }
+    .header-action svg { width: 18px; height: 18px; stroke: #000; fill: none; stroke-width: 2.5; stroke-linecap: round; }
 
-    /* ── Progress ── */
-    .progress-wrap { padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border-light); }
-    .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
-    .progress-bar-bg { background: var(--bg); border-radius: 99px; height: 6px; overflow: hidden; }
-    .progress-bar-fill { height: 100%; border-radius: 99px; background: var(--green); transition: width .4s; }
+    /* Progress */
+    .progress-wrap { padding: 10px 20px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+    .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text2); margin-bottom: 5px; }
+    .progress-bg { background: var(--bg3); border-radius: 99px; height: 5px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 99px; background: var(--green); transition: width .4s; }
 
-    /* ── Day tabs ── */
-    .tabs-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; background: var(--surface); border-bottom: 1px solid var(--border-light); }
-    .tabs-wrap::-webkit-scrollbar { display: none; }
-    .tabs { display: flex; padding: 10px 16px; gap: 8px; }
-    .tab { flex-shrink: 0; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 500; cursor: pointer; background: var(--bg); color: var(--text-2); border: 1px solid var(--border); transition: all .15s; display: flex; align-items: center; gap: 5px; }
-    .tab.active { background: var(--green); color: #fff; border-color: var(--green); }
-    .tab-badge { background: rgba(255,255,255,0.3); font-size: 10px; padding: 0 5px; border-radius: 99px; }
-    .tab:not(.active) .tab-badge { background: var(--green-light); color: var(--green-dark); }
+    /* Scrollable content */
+    .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 
-    /* ── Task list ── */
-    .task-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
-    .task-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); transition: border-color .15s; }
-    .task-item.done { opacity: .45; }
-    .task-item.confirming { border-color: var(--red); background: #fff8f8; }
-    .task-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: all .15s; }
+    /* Folder card */
+    .folder-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color .15s; }
+    .folder-card:active { border-color: var(--border2); }
+    .folder-card.done-folder { border-color: var(--green); }
+    .folder-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+    .folder-icon { font-size: 20px; flex-shrink: 0; }
+    .folder-info { flex: 1; min-width: 0; }
+    .folder-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .folder-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .folder-arrow { color: var(--text3); flex-shrink: 0; }
+    .folder-arrow svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; }
+    .folder-done-badge { font-size: 11px; font-weight: 600; color: var(--green); background: var(--green-dim); padding: 3px 8px; border-radius: 99px; flex-shrink: 0; }
+    .folder-del { width: 30px; height: 30px; border-radius: var(--radius-sm); background: transparent; border: none; color: var(--text3); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+    .folder-del svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+    .folder-del:active { color: var(--red); background: var(--red-dim); }
+
+    /* Task item */
+    .task-item { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .15s; }
+    .task-item.has-children { border-color: var(--border2); }
+    .task-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
+    .task-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; }
     .task-check.checked { background: var(--green); border-color: var(--green); }
-    .task-check svg { display: none; }
+    .task-check svg { display: none; width: 12px; height: 12px; stroke: #000; fill: none; stroke-width: 3; stroke-linecap: round; }
     .task-check.checked svg { display: block; }
     .task-body { flex: 1; min-width: 0; }
-    .task-title { font-size: 14px; line-height: 1.4; }
-    .task-item.done .task-title { text-decoration: line-through; color: var(--text-3); }
-    .task-meta { display: flex; align-items: center; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
-    .tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; }
-    .tag-high { background: var(--red-light); color: #993C1D; }
-    .tag-mid { background: var(--yellow-light); color: #854F0B; }
-    .tag-low { background: var(--lime-light); color: #3B6D11; }
-    .tag-day { background: var(--bg); color: var(--text-2); }
-    .delete-btn { flex-shrink: 0; width: 32px; height: 32px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text-3); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .15s; }
-    .delete-btn:active { background: var(--red-light); border-color: var(--red); color: var(--red); }
+    .task-name { font-size: 14px; line-height: 1.4; }
+    .task-name.done-text { text-decoration: line-through; color: var(--text3); }
+    .task-badges { display: flex; gap: 5px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
+    .badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; }
+    .badge-high { background: var(--red-dim); color: var(--red); }
+    .badge-mid { background: var(--yellow-dim); color: var(--yellow); }
+    .badge-low { background: var(--green-dim); color: var(--green); }
+    .badge-sub { background: var(--bg3); color: var(--text2); }
+    .task-expand { width: 30px; height: 30px; border-radius: var(--radius-sm); background: var(--bg3); border: none; color: var(--text2); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: transform .2s; }
+    .task-expand.open { transform: rotate(90deg); }
+    .task-expand svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; }
+    .task-del { width: 30px; height: 30px; border-radius: var(--radius-sm); background: transparent; border: none; color: var(--text3); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+    .task-del svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+    .task-del:active { color: var(--red); background: var(--red-dim); }
 
-    /* ── Confirm bar ── */
-    .confirm-inline { margin-top: 10px; padding-top: 10px; border-top: 1px solid #fdd; display: flex; align-items: center; gap: 8px; }
-    .confirm-inline span { font-size: 12px; color: var(--red); flex: 1; }
-    .confirm-inline button { font-size: 12px; padding: 5px 12px; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
-    .confirm-inline button.yes { background: var(--red); border-color: var(--red); color: #fff; }
+    /* Confirm inline */
+    .confirm-bar { display: flex; align-items: center; gap: 8px; padding: 8px 14px 10px; border-top: 1px solid var(--red-dim); }
+    .confirm-bar span { font-size: 12px; color: var(--red); flex: 1; }
+    .confirm-bar button { font-size: 12px; padding: 5px 12px; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid var(--border2); background: var(--bg3); color: var(--text); }
+    .confirm-bar button.yes { background: var(--red); border-color: var(--red); color: #fff; }
 
-    /* ── Empty state ── */
-    .empty { text-align: center; padding: 48px 0; color: var(--text-3); font-size: 14px; }
-    .empty-icon { font-size: 36px; margin-bottom: 10px; }
+    /* Subtasks */
+    .subtasks { border-top: 1px solid var(--border); }
+    .subtask-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px 10px 20px; border-bottom: 1px solid var(--border); }
+    .subtask-item:last-child { border-bottom: none; }
+    .subtask-check { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: all .15s; }
+    .subtask-check.checked { background: var(--green); border-color: var(--green); }
+    .subtask-check svg { display: none; width: 9px; height: 9px; stroke: #000; fill: none; stroke-width: 3; stroke-linecap: round; }
+    .subtask-check.checked svg { display: block; }
+    .subtask-name { flex: 1; font-size: 13px; color: var(--text2); }
+    .subtask-name.done-text { text-decoration: line-through; color: var(--text3); }
+    .subtask-del { background: none; border: none; color: var(--text3); cursor: pointer; padding: 4px; }
+    .subtask-del:active { color: var(--red); }
+    .subtask-del svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
 
-    /* ── Bottom bar ── */
-    .bottom-bar {
-      padding: 12px 16px calc(var(--safe-bottom) + 12px);
-      background: var(--surface);
-      border-top: 1px solid var(--border-light);
-    }
-    .add-btn { width: 100%; padding: 13px; border: 1.5px dashed var(--border); border-radius: var(--radius); font-size: 14px; color: var(--text-2); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; background: transparent; transition: background .15s; }
-    .add-btn:active { background: var(--bg); }
-    .clear-done-btn { width: 100%; margin-top: 8px; padding: 10px; border-radius: var(--radius-sm); font-size: 13px; color: var(--red); display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; background: var(--red-light); border: none; }
+    /* Level indentation */
+    .level-1 .task-row { padding-left: 28px; }
+    .level-2 .task-row { padding-left: 42px; }
+    .level-3 .task-row { padding-left: 56px; }
 
-    /* ── Modal ── */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
-    .modal-overlay.open { opacity: 1; pointer-events: all; }
-    .modal { background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; width: 100%; max-width: 480px; padding: 0 0 calc(var(--safe-bottom) + 16px); transform: translateY(100%); transition: transform .25s cubic-bezier(0.32,0.72,0,1); }
-    .modal-overlay.open .modal { transform: translateY(0); }
-    .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 99px; margin: 12px auto 16px; }
-    .modal-title { font-size: 16px; font-weight: 600; padding: 0 20px 16px; border-bottom: 1px solid var(--border-light); }
+    /* Add subtask row */
+    .add-subtask-row { display: flex; align-items: center; gap: 8px; padding: 9px 14px 9px 20px; border-top: 1px solid var(--border); }
+    .add-subtask-input { flex: 1; background: transparent; border: none; font-size: 13px; color: var(--text); outline: none; }
+    .add-subtask-input::placeholder { color: var(--text3); }
+    .add-subtask-btn { background: var(--green); border: none; border-radius: var(--radius-sm); color: #000; font-size: 12px; font-weight: 600; padding: 5px 10px; cursor: pointer; flex-shrink: 0; }
+
+    /* Bottom bar */
+    .bottom-bar { padding: 12px 16px calc(var(--safe-bottom) + 12px); background: var(--bg2); border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+    .add-btn { width: 100%; padding: 13px; border: 1.5px dashed var(--border2); border-radius: var(--radius); font-size: 14px; color: var(--text2); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; background: transparent; }
+    .add-btn:active { background: var(--bg3); }
+    .add-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; }
+    .clear-btn { width: 100%; padding: 10px; border-radius: var(--radius-sm); font-size: 13px; color: var(--red); display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; background: var(--red-dim); border: none; }
+
+    /* Empty */
+    .empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-text { font-size: 14px; }
+
+    /* Modal */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .overlay.open { opacity: 1; pointer-events: all; }
+    .modal { background: var(--bg2); border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; padding-bottom: calc(var(--safe-bottom) + 16px); transform: translateY(100%); transition: transform .28s cubic-bezier(0.32,0.72,0,1); border-top: 1px solid var(--border2); }
+    .overlay.open .modal { transform: translateY(0); }
+    .modal-handle { width: 40px; height: 4px; background: var(--border2); border-radius: 99px; margin: 12px auto 16px; }
+    .modal-title { font-size: 16px; font-weight: 700; padding: 0 20px 14px; border-bottom: 1px solid var(--border); }
     .modal-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
-    .field-label { font-size: 12px; font-weight: 500; color: var(--text-2); margin-bottom: 6px; }
-    .modal-body input[type=text] { width: 100%; font-size: 15px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); outline: none; }
-    .modal-body input[type=text]:focus { border-color: var(--green); }
-
-    /* Segmented prio */
-    .seg { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
-    .seg-btn { flex: 1; padding: 10px 4px; font-size: 13px; font-weight: 500; text-align: center; cursor: pointer; background: var(--bg); color: var(--text-2); border: none; border-right: 1px solid var(--border); transition: background .15s; }
+    .field-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+    .modal-input { width: 100%; font-size: 15px; padding: 12px 14px; border: 1px solid var(--border2); border-radius: var(--radius-sm); background: var(--bg3); color: var(--text); outline: none; }
+    .modal-input:focus { border-color: var(--green); }
+    .seg { display: flex; border: 1px solid var(--border2); border-radius: var(--radius-sm); overflow: hidden; }
+    .seg-btn { flex: 1; padding: 10px 4px; font-size: 13px; font-weight: 500; text-align: center; cursor: pointer; background: var(--bg3); color: var(--text2); border: none; border-right: 1px solid var(--border); transition: background .15s; }
     .seg-btn:last-child { border-right: none; }
-    .seg-btn.active-high { background: var(--red-light); color: #993C1D; }
-    .seg-btn.active-mid { background: var(--yellow-light); color: #854F0B; }
-    .seg-btn.active-low { background: var(--lime-light); color: #3B6D11; }
-
-    /* Day pills */
-    .days-row { display: flex; align-items: center; gap: 6px; }
-    .days-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; flex: 1; }
-    .day-pill { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); cursor: pointer; transition: all .15s; user-select: none; }
-    .day-pill.selected { background: var(--green-light); border-color: var(--green); }
-    .day-pill span { font-size: 10px; font-weight: 600; color: var(--text-2); }
-    .day-pill.selected span { color: var(--green-dark); }
-    .day-dot { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
-    .day-pill.selected .day-dot { background: var(--green); }
-
-    .all-toggle { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; flex-shrink: 0; }
-    .all-cb { width: 16px; height: 16px; border-radius: 4px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; background: var(--bg); transition: all .15s; }
-    .all-cb.checked { background: var(--green); border-color: var(--green); }
-    .all-cb.checked svg { display: block; }
-    .all-cb svg { display: none; }
-    .all-lbl { font-size: 9px; font-weight: 600; color: var(--text-3); }
-    .divider-v { width: 1px; height: 32px; background: var(--border); flex-shrink: 0; }
-
-    .sel-hint { font-size: 11px; color: var(--text-3); }
-    .field-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-
-    .modal-footer { padding: 0 20px; display: flex; gap: 10px; }
-    .modal-footer button { flex: 1; padding: 13px; border-radius: var(--radius); font-size: 15px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
-    .modal-footer button.primary { background: var(--green); border-color: var(--green); color: #fff; }
-    .modal-footer button.primary:disabled { opacity: .4; }
+    .seg-btn.a-high { background: var(--red-dim); color: var(--red); }
+    .seg-btn.a-mid { background: var(--yellow-dim); color: var(--yellow); }
+    .seg-btn.a-low { background: var(--green-dim); color: var(--green); }
+    .modal-footer { display: flex; gap: 10px; padding: 4px 20px 0; }
+    .modal-footer button { flex: 1; padding: 13px; border-radius: var(--radius); font-size: 15px; font-weight: 500; cursor: pointer; border: 1px solid var(--border2); background: var(--bg3); color: var(--text); }
+    .modal-footer button.primary { background: var(--green); border-color: var(--green); color: #000; font-weight: 700; }
+    .modal-footer button.primary:disabled { opacity: .35; }
   </style>
 </head>
 <body>
 <div class="app">
-
-  <!-- Header -->
-  <div class="header">
-    <div class="header-logo">✅</div>
-    <div>
-      <div class="header-title">TaskMaster</div>
+  <div class="header" id="header">
+    <div class="header-info">
+      <div class="header-title" id="header-title">TaskMaster</div>
+      <div class="header-sub" id="header-sub">Twoje foldery</div>
     </div>
-    <div class="header-sub" id="header-sub">0 / 0</div>
-  </div>
-
-  <!-- Progress -->
-  <div class="progress-wrap">
-    <div class="progress-label"><span>Postęp tygodnia</span><span id="prog-pct">0%</span></div>
-    <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-bar" style="width:0%"></div></div>
-  </div>
-
-  <!-- Day tabs -->
-  <div class="tabs-wrap">
-    <div class="tabs" id="tabs"></div>
-  </div>
-
-  <!-- Task list -->
-  <div class="task-list" id="task-list"></div>
-
-  <!-- Bottom bar -->
-  <div class="bottom-bar">
-    <button class="clear-done-btn" id="clear-done-btn" onclick="clearDone()" style="display:none">
-      🗑 Usuń ukończone zadania
+    <button class="header-action" id="header-btn" onclick="openAddModal()">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
-    <button class="add-btn" onclick="openModal()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Dodaj zadanie
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-label"><span id="prog-label">Ogólny postęp</span><span id="prog-pct">0%</span></div>
+    <div class="progress-bg"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <div class="content" id="content"></div>
+
+  <div class="bottom-bar" id="bottom-bar">
+    <button class="clear-btn" id="clear-btn" onclick="clearDone()" style="display:none">🗑 Usuń ukończone</button>
+    <button class="add-btn" onclick="openAddModal()">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span id="add-btn-label">Nowy folder</span>
     </button>
   </div>
 </div>
 
-<!-- Add task modal -->
-<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
-  <div class="modal" id="modal">
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="handleOverlay(event)">
+  <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Nowe zadanie</div>
+    <div class="modal-title" id="modal-title">Nowy folder</div>
     <div class="modal-body">
       <div>
-        <div class="field-label">Nazwa zadania</div>
-        <input type="text" id="new-title" placeholder="Czym się zajmiesz?"/>
+        <div class="field-label" id="name-label">Nazwa folderu</div>
+        <input class="modal-input" id="modal-name" placeholder="np. Dziś, Praca, Zakupy..."/>
       </div>
-      <div>
+      <div id="prio-field" style="display:none">
         <div class="field-label">Priorytet</div>
         <div class="seg">
-          <button class="seg-btn active-high" onclick="setPrio('high',this)">🔴 Wysoki</button>
+          <button class="seg-btn a-high" onclick="setPrio('high',this)">🔴 Wysoki</button>
           <button class="seg-btn" onclick="setPrio('mid',this)">🟡 Średni</button>
           <button class="seg-btn" onclick="setPrio('low',this)">🟢 Niski</button>
-        </div>
-      </div>
-      <div>
-        <div class="field-header">
-          <span class="field-label" style="margin-bottom:0">Dni tygodnia</span>
-          <span class="sel-hint" id="sel-hint">nie wybrano</span>
-        </div>
-        <div class="days-row">
-          <div class="all-toggle" onclick="toggleAll()">
-            <div class="all-cb" id="all-cb">
-              <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="1.5,6 4.5,9 10.5,3"/></svg>
-            </div>
-            <span class="all-lbl">all</span>
-          </div>
-          <div class="divider-v"></div>
-          <div class="days-grid" id="days-grid"></div>
         </div>
       </div>
     </div>
     <div class="modal-footer">
       <button onclick="closeModal()">Anuluj</button>
-      <button class="primary" id="confirm-btn" onclick="addTask()" disabled>Dodaj</button>
+      <button class="primary" id="modal-confirm" onclick="confirmModal()">Dodaj</button>
     </div>
   </div>
 </div>
 
 <script>
-const DAYS_SHORT = ['Pon','Wt','Śr','Czw','Pt','Sob','Nd'];
-const DAYS_FULL = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'];
-const PRIO_ORDER = {high:0, mid:1, low:2};
-
-let activeFilter = 'all';
+// ── State ──────────────────────────────────────────────
+// view: { screen: 'folders' } | { screen: 'folder', folderId } | { screen: 'task', folderId, taskId }
+let view = { screen: 'folders' };
+let modalMode = null; // 'folder' | 'task' | 'subtask'
+let modalContext = {}; // folderId, taskId, parentPath
 let selectedPrio = 'high';
-let selectedDays = new Set();
-let confirmingId = null;
-let nextId = 10;
+let confirmingDelete = null; // { type, id, folderId?, taskPath? }
 
-// Load from localStorage or use defaults
-let tasks = JSON.parse(localStorage.getItem('tm_tasks') || 'null') || [
-  {id:1, title:'Przygotować raport Q2', day:'Poniedziałek', prio:'high', done:false},
-  {id:2, title:'Odpisać na maile', day:'Wtorek', prio:'mid', done:false},
-  {id:3, title:'Zakupy spożywcze', day:'Środa', prio:'low', done:true},
-  {id:4, title:'Posprzątać biuro', day:'Sobota', prio:'mid', done:false},
-  {id:5, title:'Przejrzeć rozdział 3 React Native', day:'Czwartek', prio:'high', done:false},
-];
-nextId = Math.max(...tasks.map(t=>t.id), 9) + 1;
+let data = JSON.parse(localStorage.getItem('tm_data2') || 'null') || {
+  folders: [
+    {
+      id: 'f1', name: 'Dziś', tasks: [
+        { id: 't1', name: 'Zakupy', prio: 'high', done: false, subtasks: [
+          { id: 's1', name: 'Chleb', done: false, subtasks: [] },
+          { id: 's2', name: 'Woda', done: false, subtasks: [] },
+          { id: 's3', name: 'Ciastka', done: true, subtasks: [] },
+        ]},
+        { id: 't2', name: 'Zadzwonić do dentysty', prio: 'mid', done: false, subtasks: [] },
+      ]
+    },
+    { id: 'f2', name: 'Praca', tasks: [
+      { id: 't3', name: 'Raport Q2', prio: 'high', done: false, subtasks: [
+        { id: 's4', name: 'Zebrać dane', done: true, subtasks: [] },
+        { id: 's5', name: 'Napisać wnioski', done: false, subtasks: [] },
+      ]},
+    ]},
+  ]
+};
 
-function save() {
-  localStorage.setItem('tm_tasks', JSON.stringify(tasks));
+let expandedTasks = new Set();
+
+function save() { localStorage.setItem('tm_data2', JSON.stringify(data)); }
+
+// ── ID gen ─────────────────────────────────────────────
+function uid() { return Math.random().toString(36).slice(2,9); }
+
+// ── Data helpers ───────────────────────────────────────
+function getFolder(fid) { return data.folders.find(f => f.id === fid); }
+
+function getTaskByPath(fid, path) {
+  // path = [taskId, subtaskId, ...]
+  let folder = getFolder(fid);
+  if (!folder) return null;
+  let node = folder.tasks.find(t => t.id === path[0]);
+  for (let i = 1; i < path.length; i++) {
+    if (!node) return null;
+    node = node.subtasks.find(s => s.id === path[i]);
+  }
+  return node;
 }
+
+function getParentList(fid, path) {
+  if (path.length === 1) return getFolder(fid).tasks;
+  let parent = getTaskByPath(fid, path.slice(0, -1));
+  return parent ? parent.subtasks : null;
+}
+
+function countDone(tasks) {
+  let done = 0, total = 0;
+  function walk(list) { list.forEach(t => { total++; if(t.done) done++; if(t.subtasks) walk(t.subtasks); }); }
+  walk(tasks);
+  return { done, total };
+}
+
+function allDone(tasks) { const {done,total} = countDone(tasks); return total > 0 && done === total; }
+
+function countPending(tasks) {
+  let n = 0;
+  tasks.forEach(t => { if(!t.done) n++; if(t.subtasks) n += countPending(t.subtasks); });
+  return n;
+}
+
+// ── SVG helpers ────────────────────────────────────────
+const SVG_CHECK = `<svg viewBox="0 0 12 12"><polyline points="1.5,6 4.5,9 10.5,3"/></svg>`;
+const SVG_BACK  = `<svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg>`;
+const SVG_NEXT  = `<svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg>`;
+const SVG_PLUS  = `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+const SVG_TRASH = `<svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/><path d="M10,11v6M14,11v6"/><path d="M9,6V4h6v2"/></svg>`;
+const SVG_ARROW = `<svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg>`;
+
+// ── Render ─────────────────────────────────────────────
+function render() {
+  if (view.screen === 'folders') renderFolders();
+  else if (view.screen === 'folder') renderFolder();
+  else if (view.screen === 'task') renderTask();
+}
+
+function updateProgress(done, total) {
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-pct').textContent = pct + '%';
+}
+
+// ── SCREEN: Folders ────────────────────────────────────
+function renderFolders() {
+  document.getElementById('header-title').textContent = 'TaskMaster';
+  document.getElementById('header-sub').textContent = `${data.folders.length} folderów`;
+  document.getElementById('add-btn-label').textContent = 'Nowy folder';
+
+  // header: no back button
+  const hdr = document.getElementById('header');
+  const backEl = hdr.querySelector('.header-back');
+  if (backEl) backEl.remove();
+
+  let allDoneCount = 0, allTotal = 0;
+  data.folders.forEach(f => { const c = countDone(f.tasks); allDoneCount += c.done; allTotal += c.total; });
+  document.getElementById('prog-label').textContent = 'Ogólny postęp';
+  updateProgress(allDoneCount, allTotal);
+  document.getElementById('header-sub').textContent = `${data.folders.length} ${data.folders.length===1?'folder':'folderów'} · ${allTotal - allDoneCount} zadań do zrobienia`;
+
+  const hasDone = data.folders.some(f => allDone(f.tasks) && f.tasks.length > 0);
+  document.getElementById('clear-btn').style.display = hasDone ? 'flex' : 'none';
+
+  const content = document.getElementById('content');
+  if (!data.folders.length) {
+    content.innerHTML = `<div class="empty"><div class="empty-icon">📂</div><div class="empty-text">Brak folderów<br>Dodaj pierwszy folder!</div></div>`;
+    return;
+  }
+
+  content.innerHTML = data.folders.map(folder => {
+    const { done, total } = countDone(folder.tasks);
+    const isDone = total > 0 && done === total;
+    const pending = total - done;
+    return `<div class="folder-card${isDone?' done-folder':''}" onclick="openFolder('${folder.id}')">
+      <div class="folder-header">
+        <div class="folder-icon">${isDone ? '✅' : '📁'}</div>
+        <div class="folder-info">
+          <div class="folder-name">${esc(folder.name)}</div>
+          <div class="folder-meta">${total} zadań · ${pending} do zrobienia</div>
+        </div>
+        ${isDone ? `<span class="folder-done-badge">Ukończony</span>` : ''}
+        <button class="folder-del" onclick="event.stopPropagation();tryDeleteFolder('${folder.id}')">${SVG_TRASH}</button>
+        <div class="folder-arrow">${SVG_NEXT}</div>
+      </div>
+      ${confirmingDelete && confirmingDelete.type==='folder' && confirmingDelete.id===folder.id ? `
+        <div class="confirm-bar">
+          <span>Usunąć folder i wszystkie zadania?</span>
+          <button onclick="event.stopPropagation();cancelDel()">Nie</button>
+          <button class="yes" onclick="event.stopPropagation();confirmDel()">Usuń</button>
+        </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── SCREEN: Folder (task list) ─────────────────────────
+function renderFolder() {
+  const folder = getFolder(view.folderId);
+  if (!folder) { view = {screen:'folders'}; render(); return; }
+
+  ensureBack();
+  document.getElementById('header-title').textContent = folder.name;
+  document.getElementById('add-btn-label').textContent = 'Nowe zadanie';
+  document.getElementById('prog-label').textContent = 'Postęp folderu';
+
+  const { done, total } = countDone(folder.tasks);
+  updateProgress(done, total);
+  document.getElementById('header-sub').textContent = `${done} / ${total} ukończone`;
+
+  const hasDone = folder.tasks.some(t => t.done);
+  document.getElementById('clear-btn').style.display = hasDone ? 'flex' : 'none';
+
+  const content = document.getElementById('content');
+  if (!folder.tasks.length) {
+    content.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Brak zadań<br>Dodaj pierwsze zadanie!</div></div>`;
+    return;
+  }
+
+  content.innerHTML = folder.tasks.map(task => renderTaskCard(task, folder.id, [task.id], 0)).join('');
+  // attach add-subtask listeners
+  content.querySelectorAll('.add-subtask-input').forEach(inp => {
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') submitInlineSubtask(inp); });
+  });
+}
+
+function renderTaskCard(task, folderId, path, level) {
+  const pathStr = JSON.stringify(path);
+  const expanded = expandedTasks.has(task.id);
+  const hasSubs = task.subtasks && task.subtasks.length > 0;
+  const subCount = hasSubs ? task.subtasks.length : 0;
+  const subDone = hasSubs ? task.subtasks.filter(s=>s.done).length : 0;
+  const canAddSub = level < 3; // max 4 levels (0,1,2,3)
+  const isConf = confirmingDelete && confirmingDelete.taskId === task.id && confirmingDelete.folderId === folderId;
+
+  let html = `<div class="task-item${hasSubs?' has-children':''} level-${level}" id="task-${task.id}">
+    <div class="task-row">
+      <div class="task-check${task.done?' checked':''}" onclick="toggleTask('${folderId}',${pathStr})">${SVG_CHECK}</div>
+      <div class="task-body" onclick="${level===0?`openTask('${folderId}','${task.id}')`:''}" style="${level===0?'cursor:pointer':''}">
+        <div class="task-name${task.done?' done-text':''}">${esc(task.name)}</div>
+        <div class="task-badges">
+          ${level===0 ? `<span class="badge badge-${task.prio}">${task.prio==='high'?'Wysoki':task.prio==='mid'?'Średni':'Niski'}</span>` : ''}
+          ${hasSubs ? `<span class="badge badge-sub">${subDone}/${subCount} podzadań</span>` : ''}
+        </div>
+      </div>
+      ${hasSubs ? `<button class="task-expand${expanded?' open':''}" onclick="toggleExpand('${task.id}')">${SVG_ARROW}</button>` : ''}
+      <button class="task-del" onclick="tryDeleteTask('${folderId}',${pathStr})">${SVG_TRASH}</button>
+    </div>
+    ${isConf ? `<div class="confirm-bar">
+      <span>Czy na pewno usunąć?</span>
+      <button onclick="cancelDel()">Nie</button>
+      <button class="yes" onclick="confirmDel()">Usuń</button>
+    </div>` : ''}`;
+
+  if (hasSubs && expanded) {
+    html += `<div class="subtasks">`;
+    task.subtasks.forEach(sub => {
+      html += renderTaskCard(sub, folderId, [...path, sub.id], level + 1);
+    });
+    html += `</div>`;
+  }
+
+  if (canAddSub && expanded) {
+    html += `<div class="add-subtask-row">
+      <input class="add-subtask-input" placeholder="+ Dodaj podzadanie..." data-folder="${folderId}" data-path='${pathStr}'/>
+      <button class="add-subtask-btn" onclick="submitInlineSubtask(this.previousElementSibling)">Dodaj</button>
+    </div>`;
+  } else if (!hasSubs && canAddSub) {
+    // show inline add when task is clicked/expanded
+    html += `<div class="add-subtask-row" id="add-sub-${task.id}" style="display:none">
+      <input class="add-subtask-input" placeholder="+ Dodaj podzadanie..." data-folder="${folderId}" data-path='${pathStr}'/>
+      <button class="add-subtask-btn" onclick="submitInlineSubtask(this.previousElementSibling)">Dodaj</button>
+    </div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+// ── SCREEN: Task detail ────────────────────────────────
+function renderTask() {
+  const folder = getFolder(view.folderId);
+  const task = folder ? folder.tasks.find(t => t.id === view.taskId) : null;
+  if (!task) { view = {screen:'folder', folderId: view.folderId}; render(); return; }
+
+  ensureBack();
+  document.getElementById('header-title').textContent = task.name;
+  document.getElementById('add-btn-label').textContent = 'Nowe podzadanie';
+  document.getElementById('prog-label').textContent = 'Postęp zadania';
+
+  const { done, total } = countDone([task]);
+  updateProgress(done, total);
+  document.getElementById('header-sub').textContent = `${done} / ${total} ukończone`;
+  document.getElementById('clear-btn').style.display = 'none';
+
+  const content = document.getElementById('content');
+
+  // Task info card
+  let html = `<div class="task-item">
+    <div class="task-row">
+      <div class="task-check${task.done?' checked':''}" onclick="toggleTask('${view.folderId}',['${view.taskId}'])">${SVG_CHECK}</div>
+      <div class="task-body">
+        <div class="task-name${task.done?' done-text':''}">${esc(task.name)}</div>
+        <div class="task-badges"><span class="badge badge-${task.prio}">${task.prio==='high'?'Wysoki':task.prio==='mid'?'Średni':'Niski'}</span></div>
+      </div>
+    </div>
+  </div>`;
+
+  // Subtasks
+  if (task.subtasks && task.subtasks.length) {
+    html += task.subtasks.map(sub => renderTaskCard(sub, view.folderId, [view.taskId, sub.id], 1)).join('');
+  } else {
+    html += `<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">Brak podzadań</div></div>`;
+  }
+
+  content.innerHTML = html;
+  content.querySelectorAll('.add-subtask-input').forEach(inp => {
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') submitInlineSubtask(inp); });
+  });
+}
+
+// ── Navigation ─────────────────────────────────────────
+function openFolder(fid) { view = {screen:'folder', folderId:fid}; confirmingDelete=null; render(); }
+function openTask(fid, tid) { view = {screen:'task', folderId:fid, taskId:tid}; confirmingDelete=null; render(); }
+function goBack() {
+  if (view.screen === 'task') { view = {screen:'folder', folderId:view.folderId}; }
+  else if (view.screen === 'folder') { view = {screen:'folders'}; }
+  confirmingDelete = null; render();
+}
+
+function ensureBack() {
+  const hdr = document.getElementById('header');
+  if (!hdr.querySelector('.header-back')) {
+    const btn = document.createElement('div');
+    btn.className = 'header-back';
+    btn.innerHTML = SVG_BACK;
+    btn.onclick = goBack;
+    hdr.insertBefore(btn, hdr.firstChild);
+  }
+}
+
+// ── Toggle ─────────────────────────────────────────────
+function toggleTask(fid, path) {
+  const node = getTaskByPath(fid, path);
+  if (!node) return;
+  node.done = !node.done;
+  save(); render();
+}
+
+function toggleExpand(taskId) {
+  if (expandedTasks.has(taskId)) expandedTasks.delete(taskId);
+  else expandedTasks.add(taskId);
+  render();
+}
+
+// ── Inline subtask ─────────────────────────────────────
+function submitInlineSubtask(inp) {
+  const name = inp.value.trim();
+  if (!name) return;
+  const fid = inp.dataset.folder;
+  const path = JSON.parse(inp.dataset.path);
+  const parent = getTaskByPath(fid, path);
+  if (!parent) return;
+  if (!parent.subtasks) parent.subtasks = [];
+  parent.subtasks.push({ id: uid(), name, done: false, subtasks: [] });
+  expandedTasks.add(path[path.length-1]);
+  inp.value = '';
+  save(); render();
+}
+
+// ── Delete ─────────────────────────────────────────────
+function tryDeleteFolder(fid) { confirmingDelete = {type:'folder', id:fid}; render(); }
+function tryDeleteTask(fid, path) {
+  const node = getTaskByPath(fid, path);
+  if (!node) return;
+  if (node.done) { doDeleteTask(fid, path); return; }
+  confirmingDelete = {type:'task', folderId:fid, taskPath:path, taskId:path[path.length-1]}; render();
+}
+function cancelDel() { confirmingDelete = null; render(); }
+function confirmDel() {
+  if (!confirmingDelete) return;
+  if (confirmingDelete.type === 'folder') {
+    data.folders = data.folders.filter(f => f.id !== confirmingDelete.id);
+  } else {
+    doDeleteTask(confirmingDelete.folderId, confirmingDelete.taskPath);
+    return;
+  }
+  confirmingDelete = null; save(); render();
+}
+function doDeleteTask(fid, path) {
+  const list = getParentList(fid, path);
+  const lastId = path[path.length-1];
+  if (list) { const idx = list.findIndex(t => t.id === lastId); if (idx !== -1) list.splice(idx, 1); }
+  confirmingDelete = null; save(); render();
+}
+
+// ── Clear done ─────────────────────────────────────────
+function clearDone() {
+  if (view.screen === 'folders') {
+    data.folders = data.folders.filter(f => !allDone(f.tasks) || f.tasks.length === 0);
+  } else if (view.screen === 'folder') {
+    const folder = getFolder(view.folderId);
+    if (folder) folder.tasks = folder.tasks.filter(t => !t.done);
+  }
+  save(); render();
+}
+
+// ── Modal ──────────────────────────────────────────────
+function openAddModal() {
+  if (view.screen === 'folders') {
+    modalMode = 'folder';
+    document.getElementById('modal-title').textContent = 'Nowy folder';
+    document.getElementById('name-label').textContent = 'Nazwa folderu';
+    document.getElementById('modal-name').placeholder = 'np. Dziś, Praca, Zakupy...';
+    document.getElementById('prio-field').style.display = 'none';
+  } else if (view.screen === 'folder') {
+    modalMode = 'task';
+    modalContext = { folderId: view.folderId };
+    document.getElementById('modal-title').textContent = 'Nowe zadanie';
+    document.getElementById('name-label').textContent = 'Nazwa zadania';
+    document.getElementById('modal-name').placeholder = 'np. Zadzwonić, Kupić...';
+    document.getElementById('prio-field').style.display = 'block';
+  } else if (view.screen === 'task') {
+    modalMode = 'subtask';
+    modalContext = { folderId: view.folderId, taskId: view.taskId };
+    document.getElementById('modal-title').textContent = 'Nowe podzadanie';
+    document.getElementById('name-label').textContent = 'Nazwa podzadania';
+    document.getElementById('modal-name').placeholder = 'np. Chleb, Woda...';
+    document.getElementById('prio-field').style.display = 'none';
+  }
+  selectedPrio = 'high';
+  document.querySelectorAll('.seg-btn').forEach((b,i) => b.className = 'seg-btn' + (i===0?' a-high':''));
+  document.getElementById('modal-name').value = '';
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(() => document.getElementById('modal-name').focus(), 300);
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+function handleOverlay(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
 
 function setPrio(p, btn) {
   selectedPrio = p;
   document.querySelectorAll('.seg-btn').forEach(b => b.className = 'seg-btn');
-  btn.className = 'seg-btn active-' + p;
+  btn.className = 'seg-btn a-' + p;
 }
 
-function toggleAll() {
-  if (selectedDays.size === 7) selectedDays.clear();
-  else DAYS_FULL.forEach(d => selectedDays.add(d));
-  refreshDayUI();
-}
-
-function toggleDay(full) {
-  if (selectedDays.has(full)) selectedDays.delete(full);
-  else selectedDays.add(full);
-  refreshDayUI();
-}
-
-function refreshDayUI() {
-  const allSel = selectedDays.size === 7;
-  const cb = document.getElementById('all-cb');
-  cb.className = 'all-cb' + (allSel ? ' checked' : '');
-  document.getElementById('days-grid').innerHTML = DAYS_SHORT.map((s, i) => {
-    const full = DAYS_FULL[i];
-    const sel = selectedDays.has(full);
-    return `<div class="day-pill${sel?' selected':''}" onclick="toggleDay('${full}')">
-      <span>${s}</span><div class="day-dot"></div>
-    </div>`;
-  }).join('');
-  const c = selectedDays.size;
-  document.getElementById('sel-hint').textContent = c === 0 ? 'nie wybrano' : c === 7 ? 'cały tydzień' : `${c} ${c===1?'dzień':'dni'}`;
-  document.getElementById('confirm-btn').disabled = c === 0;
-}
-
-function openModal() {
-  selectedDays = new Set(activeFilter !== 'all' ? [activeFilter] : []);
-  selectedPrio = 'high';
-  document.querySelectorAll('.seg-btn').forEach((b,i) => b.className = 'seg-btn' + (i===0?' active-high':''));
-  document.getElementById('new-title').value = '';
-  refreshDayUI();
-  document.getElementById('modal-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('new-title').focus(), 300);
-}
-
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-}
-
-function handleOverlayClick(e) {
-  if (e.target === document.getElementById('modal-overlay')) closeModal();
-}
-
-function tryDelete(id) {
-  const t = tasks.find(t => t.id === id);
-  if (!t) return;
-  if (t.done) {
-    tasks = tasks.filter(t => t.id !== id);
-    save(); render();
-  } else {
-    confirmingId = id;
-    render();
+function confirmModal() {
+  const name = document.getElementById('modal-name').value.trim();
+  if (!name) return;
+  if (modalMode === 'folder') {
+    data.folders.push({ id: uid(), name, tasks: [] });
+  } else if (modalMode === 'task') {
+    const folder = getFolder(modalContext.folderId);
+    if (folder) folder.tasks.push({ id: uid(), name, prio: selectedPrio, done: false, subtasks: [] });
+  } else if (modalMode === 'subtask') {
+    const task = getFolder(modalContext.folderId)?.tasks.find(t => t.id === modalContext.taskId);
+    if (task) { task.subtasks.push({ id: uid(), name, done: false, subtasks: [] }); }
   }
-}
-
-function confirmDelete() {
-  tasks = tasks.filter(t => t.id !== confirmingId);
-  confirmingId = null;
-  save(); render();
-}
-
-function cancelDelete() {
-  confirmingId = null;
-  render();
-}
-
-function toggleDone(id) {
-  const t = tasks.find(t => t.id === id);
-  if (t) t.done = !t.done;
-  if (confirmingId === id) confirmingId = null;
-  save(); render();
-}
-
-function clearDone() {
-  tasks = tasks.filter(t => !t.done);
-  save(); render();
-}
-
-function addTask() {
-  const title = document.getElementById('new-title').value.trim();
-  if (!title || selectedDays.size === 0) return;
-  const sorted = [...selectedDays].sort((a,b) => DAYS_FULL.indexOf(a) - DAYS_FULL.indexOf(b));
-  sorted.forEach(day => tasks.push({id: nextId++, title, day, prio: selectedPrio, done: false}));
   save(); closeModal(); render();
 }
 
-function prioTag(p) {
-  const map = {high:['tag-high','Wysoki'], mid:['tag-mid','Średni'], low:['tag-low','Niski']};
-  const [cls, lbl] = map[p];
-  return `<span class="tag ${cls}">${lbl}</span>`;
-}
+// ── Key enter in modal ─────────────────────────────────
+document.getElementById('modal-name').addEventListener('keydown', e => { if (e.key === 'Enter') confirmModal(); });
 
-function render() {
-  // Tabs
-  const filtered_for_tabs = activeFilter === 'all' ? tasks : tasks.filter(t => t.day === activeFilter);
-  const tabsEl = document.getElementById('tabs');
-  const allPending = tasks.filter(t => !t.done).length;
-  let tabsHtml = `<div class="tab${activeFilter==='all'?' active':''}" onclick="setFilter('all')">
-    Wszystkie${allPending > 0 ? `<span class="tab-badge">${allPending}</span>` : ''}
-  </div>`;
-  DAYS_FULL.forEach(d => {
-    const c = tasks.filter(t => t.day === d && !t.done).length;
-    tabsHtml += `<div class="tab${activeFilter===d?' active':''}" onclick="setFilter('${d}')">
-      ${d.slice(0,3)}${c > 0 ? `<span class="tab-badge">${c}</span>` : ''}
-    </div>`;
-  });
-  tabsEl.innerHTML = tabsHtml;
+// ── Escape ─────────────────────────────────────────────
+function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  // Tasks
-  let list = activeFilter === 'all' ? [...tasks] : tasks.filter(t => t.day === activeFilter);
-  const listEl = document.getElementById('task-list');
-
-  if (!list.length) {
-    listEl.innerHTML = `<div class="empty"><div class="empty-icon">🎉</div>Brak zadań na ten dzień</div>`;
-  } else {
-    listEl.innerHTML = list.map(t => {
-      const isConf = confirmingId === t.id;
-      return `<div class="task-item${t.done?' done':''}${isConf?' confirming':''}">
-        <div class="task-check${t.done?' checked':''}" onclick="toggleDone(${t.id})">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="1.5,6 4.5,9 10.5,3"/></svg>
-        </div>
-        <div class="task-body">
-          <div class="task-title" onclick="toggleDone(${t.id})">${t.title}</div>
-          <div class="task-meta">
-            ${prioTag(t.prio)}
-            ${activeFilter==='all' ? `<span class="tag tag-day">${t.day.slice(0,3)}</span>` : ''}
-          </div>
-          ${isConf ? `<div class="confirm-inline">
-            <span>Czy na pewno chcesz usunąć?</span>
-            <button onclick="cancelDelete()">Nie</button>
-            <button class="yes" onclick="confirmDelete()">Usuń</button>
-          </div>` : ''}
-        </div>
-        <button class="delete-btn" onclick="tryDelete(${t.id})">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-        </button>
-      </div>`;
-    }).join('');
-  }
-
-  // Progress
-  const done = tasks.filter(t => t.done).length;
-  const total = tasks.length;
-  const pct = total ? Math.round(done/total*100) : 0;
-  document.getElementById('prog-bar').style.width = pct + '%';
-  document.getElementById('prog-pct').textContent = pct + '%';
-  document.getElementById('header-sub').textContent = `${done} / ${total} ukończone`;
-
-  // Clear done btn
-  document.getElementById('clear-done-btn').style.display = done > 0 ? 'flex' : 'none';
-}
-
-function setFilter(f) {
-  activeFilter = f;
-  render();
-  // scroll active tab into view
-  setTimeout(() => {
-    const tabs = document.querySelectorAll('.tab');
-    const idx = f === 'all' ? 0 : DAYS_FULL.indexOf(f) + 1;
-    if (tabs[idx]) tabs[idx].scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
-  }, 50);
-}
-
-// Service Worker
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
-}
+// ── Service Worker ─────────────────────────────────────
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 
 render();
 </script>
